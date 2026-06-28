@@ -1,0 +1,40 @@
+name: "Actionfile installer"
+description: "A simple Actionfile executor to automate tasks"
+author: "Gerard Braad <me@gbraad.nl>"
+inputs:
+  version:
+    description: 'Version of actionfile to download'
+    required: false
+    default: '0.5'
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Actionfile executor
+      id: setup
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+        DOWNLOAD_BASEURL="https://github.com/ducttape-infra/actionfile/releases/download/v${VERSION}"
+
+        arch=$(uname -m)
+        if [[ "$arch" == "x86_64" ]]; then
+          DOWNLOAD_URL="${DOWNLOAD_BASEURL}/action-linux-amd64"
+        elif [[ "$arch" == "aarch64" ]]; then
+          DOWNLOAD_URL="${DOWNLOAD_BASEURL}/action-linux-arm64"
+        else
+          echo "::error::Unsupported architecture: $arch. Only x86_64 and aarch64 are supported."
+          exit 1
+        fi
+
+        echo "Downloading Actionfile executor from $DOWNLOAD_URL"
+        mkdir -p /tmp/actionfile-executor
+        curl -sSL $DOWNLOAD_URL -o /tmp/actionfile-executor/action
+        chmod +x /tmp/actionfile-executor/action
+        echo "Downloaded Actionfile executor binary"
+
+        sudo mv /tmp/actionfile-executor/action /usr/sbin/action
+        rm -rf /tmp/actionfile-executor/
+        BINARY_PATH="/usr/sbin/action"
+        echo "Installed Actionfile executor binary to /usr/sbin"
+
+        echo "ACTIONFILE=$BINARY_PATH" >> $GITHUB_ENV
